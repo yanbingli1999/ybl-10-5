@@ -69,8 +69,9 @@ export function AlchemyFurnace({ herbIds, alchemyParams, onComplete, disabled }:
   const [result, setResult] = useState<AlchemyResult | null>(null);
   const [stirAnim, setStirAnim] = useState(false);
 
+  const startTimestampRef = useRef<number>(0);
+  const fireStartRef = useRef<number>(0);
   const fireHistoryRef = useRef<{ level: FireLevel; duration: number }[]>([]);
-  const lastTickRef = useRef<number>(0);
   const intervalRef = useRef<number | null>(null);
 
   const params = alchemyParams;
@@ -79,10 +80,12 @@ export function AlchemyFurnace({ herbIds, alchemyParams, onComplete, disabled }:
     return herbIds.map(id => HERBS.find(h => h.id === id)).filter(Boolean);
   }, [herbIds]);
 
-  const progressPct = useMemo(() => {
+  const rawProgressPct = useMemo(() => {
     if (!params) return 0;
-    return Math.min(100, (elapsed / params.optimalDuration) * 100);
+    return (elapsed / params.optimalDuration) * 100;
   }, [elapsed, params]);
+
+  const progressPct = Math.min(100, rawProgressPct);
 
   const bubbleIntensity = useMemo(() => {
     const base = FIRE_ORDER[fireLevel] * 0.3;
@@ -90,15 +93,30 @@ export function AlchemyFurnace({ herbIds, alchemyParams, onComplete, disabled }:
     return Math.min(1, base + stirBonus);
   }, [fireLevel, stirCount]);
 
+  useEffect(() => {
+    setIsRefining(false);
+    setFireLevel("medium");
+    setStirCount(0);
+    setElapsed(0);
+    setResult(null);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    fireHistoryRef.current = [];
+  }, [herbIds, alchemyParams]);
+
   const startRefining = () => {
     if (disabled || !params || herbIds.length === 0) return;
+    const now = Date.now();
     setIsRefining(true);
     setFireLevel("medium");
     setStirCount(0);
     setElapsed(0);
     setResult(null);
+    startTimestampRef.current = now;
+    fireStartRef.current = now;
     fireHistoryRef.current = [{ level: "medium", duration: 0 }];
-    lastTickRef.current = Date.now();
   };
 
   const takeOut = () => {
@@ -108,12 +126,15 @@ export function AlchemyFurnace({ herbIds, alchemyParams, onComplete, disabled }:
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    const now = Date.now();
+    const remainingFireDuration = (now - fireStartRef.current) / 1000;
     const lastHist = fireHistoryRef.current[fireHistoryRef.current.length - 1];
-    if (lastHist) lastHist.duration += elapsed - fireHistoryRef.current.reduce((s, h) => s + h.duration, 0);
+    if (lastHist) lastHist.duration += remainingFireDuration;
 
     const fireScore = calcFireScore(fireHistoryRef.current, params.optimalFire, params.fireTolerance);
     const stirScore = calcStirScore(stirCount, params.optimalStirs, params.stirTolerance);
-    const timingScore = calcTimingScore(elapsed, params.optimalDuration, params.durationTolerance);
+    const finalElapsed = (now - startTimestampRef.current) / 1000;
+    const timingScore = calcTimingScore(finalElapsed, params.optimalDuration, params.durationTolerance);
     const totalScore = Math.round(fireScore * 0.35 + stirScore * 0.3 + timingScore * 0.35);
     const quality = determineQuality(totalScore, fireScore);
 
@@ -131,13 +152,13 @@ export function AlchemyFurnace({ herbIds, alchemyParams, onComplete, disabled }:
   const handleFireChange = (level: FireLevel) => {
     if (!isRefining || disabled) return;
     const now = Date.now();
-    const delta = (now - lastTickRef.current) / 1000;
-    lastTickRef.current = now;
+    const duration = (now - fireStartRef.current) / 1000;
+    fireStartRef.current = now;
     const lastHist = fireHistoryRef.current[fireHistoryRef.current.length - 1];
     if (lastHist && lastHist.level === fireLevel) {
-      lastHist.duration += delta;
+      lastHist.duration += duration;
     } else {
-      fireHistoryRef.current.push({ level, duration: delta });
+      fireHistoryRef.current.push({ level, duration });
     }
     setFireLevel(level);
   };
@@ -151,12 +172,8 @@ export function AlchemyFurnace({ herbIds, alchemyParams, onComplete, disabled }:
 
   useEffect(() => {
     if (!isRefining) return;
-    lastTickRef.current = Date.now();
     intervalRef.current = window.setInterval(() => {
-      const now = Date.now();
-      const delta = (now - lastTickRef.current) / 1000;
-      lastTickRef.current = now;
-      setElapsed(prev => prev + delta);
+      setElapsed((Date.now() - startTimestampRef.current) / 1000);
     }, 100);
     return () => {
       if (intervalRef.current) {
@@ -288,11 +305,11 @@ export function AlchemyFurnace({ herbIds, alchemyParams, onComplete, disabled }:
         </div>
         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
           <div
-            className={`h-full bg-gradient-to-r from-clinic-jade to-clinic-amber transition-all duration-100 ${progressPct > 120 ? "animate-pulse" : ""}`}
-            style={{ width: `${Math.min(100, progressPct)}%` }}
+            className={`h-full bg-gradient-to-r from-clinic-jade to-clinic-amber transition-all duration-100 ${rawProgressPct > 120 ? "animate-pulse" : ""}`}
+            style={{ width: `${progressPct}%` }}
           />
         </div>
-        {progressPct > 100 && (
+        {rawProgressPct > 100 && (
           <div className="text-[10px] text-clinic-crisis text-right mt-1">⚠️ 已超过最佳出炉时间</div>
         )}
       </div>
