@@ -22,6 +22,38 @@ export type BedStatus = "empty" | "occupied" | "cleaning";
 
 export type TreatmentResult = "pending" | "success" | "fail" | "worsen";
 
+export type ElixirQuality = "burnt" | "common" | "fine" | "supreme";
+
+export type FireLevel = "low" | "medium" | "high" | "violent";
+
+export interface AlchemyParams {
+  optimalFire: FireLevel;
+  optimalStirs: number;
+  optimalDuration: number;
+  fireTolerance: number;
+  stirTolerance: number;
+  durationTolerance: number;
+}
+
+export interface AlchemyState {
+  herbIds: string[];
+  fireLevel: FireLevel;
+  stirCount: number;
+  elapsed: number;
+  totalDuration: number;
+  isRefining: boolean;
+  quality: ElixirQuality | null;
+  temperature: number;
+}
+
+export interface AlchemyResult {
+  quality: ElixirQuality;
+  qualityScore: number;
+  fireScore: number;
+  stirScore: number;
+  timingScore: number;
+}
+
 export interface Breed {
   id: string;
   name: string;
@@ -49,6 +81,7 @@ export interface Prescription {
   herbIds: string[];
   successRate: number;
   name: string;
+  alchemyParams: AlchemyParams;
 }
 
 export interface Beast {
@@ -99,6 +132,8 @@ export interface Bed {
     satisfaction: number;
     symptoms: string[];
   } | null;
+  elixirQuality: ElixirQuality | null;
+  alchemyResult: AlchemyResult | null;
 }
 
 export interface Treatment {
@@ -126,6 +161,7 @@ export interface MedicalRecord {
   daysToHeal: number;
   evolved: boolean;
   notes: string;
+  elixirQuality: ElixirQuality | null;
 }
 
 export interface Transaction {

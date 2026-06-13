@@ -1,6 +1,6 @@
 import { BedDouble, UserPlus, CheckCircle2, XCircle, Clock, Loader2, Search } from "lucide-react";
 import { useGameStore } from "@/store/gameStore";
-import { BREEDS, SEVERITY_NAMES, SEVERITY_BORDER, DISEASE_NAMES, HERBS } from "@/data/gameData";
+import { BREEDS, SEVERITY_NAMES, SEVERITY_BORDER, DISEASE_NAMES, HERBS, ELIXIR_QUALITY_NAMES, ELIXIR_QUALITY_EMOJIS, ELIXIR_QUALITY_COLORS } from "@/data/gameData";
 import type { Bed } from "@/types/game";
 
 interface BedGridProps {
@@ -129,6 +129,11 @@ export function BedGrid({ onBedClick }: BedGridProps) {
                       <div className="text-[10px] text-gray-500 truncate">
                         💊 {herbsUsed.join(" ")}
                       </div>
+                      {bed.elixirQuality && (
+                        <div className={`text-[10px] mt-0.5 inline-block px-1.5 py-0.5 rounded border ${ELIXIR_QUALITY_COLORS[bed.elixirQuality]}`}>
+                          {ELIXIR_QUALITY_EMOJIS[bed.elixirQuality]} {ELIXIR_QUALITY_NAMES[bed.elixirQuality]}药剂
+                        </div>
+                      )}
                       <div className="flex items-center gap-1 text-[10px] text-gray-500">
                         {assignedStaff ? (
                           <span className="flex items-center gap-0.5 bg-clinic-light-jade/10 px-1.5 rounded">

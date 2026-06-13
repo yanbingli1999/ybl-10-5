@@ -13,6 +13,7 @@ import type {
   WeatherType,
   Prescription,
   TreatmentResult,
+  AlchemyResult,
 } from "@/types/game";
 import {
   BREEDS,
@@ -126,7 +127,7 @@ export interface GameState {
   selectBeast: (id: string | null) => void;
   selectBed: (id: string | null) => void;
   dismissBeast: (id: string) => void;
-  assignBedAndTreat: (beastId: string, bedId: string, staffId: string | null, herbIds: string[], playerDiagnosis: DiseaseType | null) => void;
+  assignBedAndTreat: (beastId: string, bedId: string, staffId: string | null, herbIds: string[], playerDiagnosis: DiseaseType | null, alchemyResult: AlchemyResult | null) => void;
   purchaseHerb: (herbId: string, qty: number) => void;
   collectFromBed: (bedId: string) => void;
   addNotification: (type: Notification["type"], message: string) => void;
@@ -152,6 +153,8 @@ function createInitialBeds(): Bed[] {
     playerDiagnosis: null,
     startedAt: null,
     beastSnapshot: null,
+    elixirQuality: null,
+    alchemyResult: null,
   }));
 }
 
@@ -256,7 +259,7 @@ export const useGameStore = create<GameState>()(
         get().addNotification("success", `采购 ${herb.name} x${qty}，花费${totalCost}金`);
       },
 
-      assignBedAndTreat: (beastId, bedId, staffId, herbIds, playerDiagnosis) => {
+      assignBedAndTreat: (beastId, bedId, staffId, herbIds, playerDiagnosis, alchemyResult) => {
         const s = get();
         const beast = s.waitingQueue.find(b => b.id === beastId);
         const bed = s.beds.find(b => b.id === bedId);
@@ -311,6 +314,8 @@ export const useGameStore = create<GameState>()(
             satisfaction: beast.satisfaction,
             symptoms: beast.symptoms,
           },
+          elixirQuality: alchemyResult?.quality ?? null,
+          alchemyResult,
         } : b);
 
         const newStaff = s.staff.map(st => st.id === staffId ? { ...st, status: "working" as const, assignedBedId: bedId } : st);
@@ -351,9 +356,29 @@ export const useGameStore = create<GameState>()(
           const severityMult = { mild: 1, moderate: 1.4, severe: 1.8, critical: 2.3 }[beast.severity] || 1;
           const satMult = beast.satisfaction / 100;
           const reputationBonus = s.reputation / 100;
-          const revenue = Math.floor(breed.baseFees * severityMult * (0.8 + 0.4 * satMult) * (1 + reputationBonus * 0.3));
+          let baseRevenue = Math.floor(breed.baseFees * severityMult * (0.8 + 0.4 * satMult) * (1 + reputationBonus * 0.3));
+
+          const qualityMult: Record<string, number> = {
+            supreme: 1.8,
+            fine: 1.3,
+            common: 1.0,
+            burnt: 0.5,
+          };
+          const revenue = Math.floor(baseRevenue * (qualityMult[bed.elixirQuality ?? "common"] ?? 1));
+
           let repGain = Math.ceil(3 * severityMult * satMult);
-          const trustGain = Math.ceil(10 * severityMult * satMult);
+          let trustGain = Math.ceil(10 * severityMult * satMult);
+
+          if (bed.elixirQuality === "supreme") {
+            repGain += 5;
+            trustGain += 8;
+          } else if (bed.elixirQuality === "fine") {
+            repGain += 2;
+            trustGain += 4;
+          } else if (bed.elixirQuality === "burnt") {
+            repGain = Math.max(1, Math.floor(repGain * 0.3));
+            trustGain = Math.max(1, Math.floor(trustGain * 0.3));
+          }
 
           const diagnosisCorrect = bed.playerDiagnosis === beast.disease;
           if (diagnosisCorrect) {
@@ -374,7 +399,17 @@ export const useGameStore = create<GameState>()(
           }
           void newStage;
 
-          const notes = rand(NOTES_SUCCESS);
+          const qualityNotes: Record<string, string> = {
+            supreme: "🌟极品药剂立竿见影，灵兽精神焕发！",
+            fine: "💎精良品质药效醇厚，恢复效果显著。",
+            common: "🧪普通药剂中规中矩，勉强治愈。",
+            burnt: "💀焦糊药剂虽难以下咽，好歹有点效果...",
+          };
+          const baseNotes = rand(NOTES_SUCCESS);
+          const notes = bed.elixirQuality
+            ? `${qualityNotes[bed.elixirQuality] || ""} ${baseNotes}`
+            : baseNotes;
+
           const days = 1;
           const daysToHeal = days;
 
@@ -392,6 +427,7 @@ export const useGameStore = create<GameState>()(
             daysToHeal,
             evolved,
             notes: evolved ? `${notes} 灵兽发生了进化！` : notes,
+            elixirQuality: bed.elixirQuality,
           };
 
           const newRel: BeastRelationship = {
@@ -411,13 +447,27 @@ export const useGameStore = create<GameState>()(
           get()._addTransaction("income", "诊金收入", revenue, `治愈 ${breed.name}·${beast.name}${evolved ? "(进化加成)" : ""}`);
           const evolveMsg = evolved ? " 🎉灵兽发生进化！额外获得加成！" : "";
           const diagMsg = diagnosisCorrect ? " 🔍诊断正确！" : "";
-          get().addNotification("success", `治愈成功！获得 ${revenue} 金，声望+${repGain}，亲密度+${trustGain}${diagMsg}${evolveMsg}`);
-        } else if (bed.result === "fail" && beast) {
-          const penaltyMoney = Math.floor(s.money * 0.05) + 20;
-          const penaltyRep = 5;
+          const qualityMsg = bed.elixirQuality ? ` ${bed.elixirQuality === "supreme" ? "🌟极品" : bed.elixirQuality === "fine" ? "💎精良" : bed.elixirQuality === "common" ? "🧪普通" : "💀焦糊"}药剂` : "";
+          get().addNotification("success", `治愈成功！${qualityMsg}获得 ${revenue} 金，声望+${repGain}，亲密度+${trustGain}${diagMsg}${evolveMsg}`);
+        } else if ((bed.result === "fail" || bed.result === "worsen") && beast) {
+          const isWorsen = bed.result === "worsen";
+          const penaltyMult = isWorsen ? 1.8 : 1;
+          const penaltyMoney = Math.floor((s.money * 0.05 + 20) * penaltyMult);
+          const penaltyRep = isWorsen ? 10 : 5;
           const breedName = breed?.name || "灵兽";
 
-          const notes = rand(NOTES_FAIL);
+          const qualityFailNotes: Record<string, string> = {
+            supreme: "竟使用了极品药剂还失败...",
+            fine: "精良药剂也没能救回来...",
+            common: "普通药剂效果有限。",
+            burnt: "焦糊药剂简直是雪上加霜！",
+          };
+          const worsenNotes = isWorsen ? "病情反而恶化了！" : "";
+          const baseNotes = rand(NOTES_FAIL);
+          const notes = bed.elixirQuality
+            ? `${qualityFailNotes[bed.elixirQuality] || ""} ${worsenNotes} ${baseNotes}`
+            : `${worsenNotes} ${baseNotes}`;
+
           const record: MedicalRecord = {
             id: uid("rec"),
             beastId: bedBeastId!,
@@ -432,6 +482,7 @@ export const useGameStore = create<GameState>()(
             daysToHeal: Math.max(1, Math.ceil((s.currentTime - (bed.startedAt ?? s.currentTime)) / 24) || 1),
             evolved: false,
             notes,
+            elixirQuality: bed.elixirQuality,
           };
 
           set(st => ({
@@ -439,9 +490,10 @@ export const useGameStore = create<GameState>()(
             reputation: Math.max(0, st.reputation - penaltyRep),
             medicalRecords: [record, ...st.medicalRecords],
           }));
-          get()._addTransaction("expense", "误诊赔偿", penaltyMoney, `${breedName}·${beast.name} 治疗失败赔偿`);
+          get()._addTransaction("expense", "误诊赔偿", penaltyMoney, `${breedName}·${beast.name} ${isWorsen ? "病情恶化" : "治疗失败"}赔偿`);
           const realDiseaseName = DISEASE_NAMES[beast.disease];
-          get().addNotification("error", `治疗失败！确诊为「${realDiseaseName}」。赔偿 ${penaltyMoney} 金，声望-${penaltyRep}`);
+          const worsenMsg = isWorsen ? " ⚠️病情恶化！" : "";
+          get().addNotification("error", `${isWorsen ? "病情恶化" : "治疗失败"}！确诊为「${realDiseaseName}」。${worsenMsg}赔偿 ${penaltyMoney} 金，声望-${penaltyRep}`);
         }
 
         // Release staff & bed
@@ -457,6 +509,8 @@ export const useGameStore = create<GameState>()(
           playerDiagnosis: null,
           startedAt: null,
           beastSnapshot: null,
+          elixirQuality: null,
+          alchemyResult: null,
         } : b);
         const staffToRelease = bed.assignedStaffId;
         const newStaff = s.staff.map(st => st.id === staffToRelease ? {
@@ -563,11 +617,28 @@ export const useGameStore = create<GameState>()(
                 const stf = state.staff.find(x => x.id === b.assignedStaffId);
                 finalRate += (stf?.skillLevel ?? 1) * 5;
               }
+              // 药剂品质加成
+              if (b.elixirQuality) {
+                const qualityBonus: Record<string, number> = {
+                  supreme: 18,
+                  fine: 10,
+                  common: 0,
+                  burnt: -30,
+                };
+                finalRate += qualityBonus[b.elixirQuality] ?? 0;
+              }
               // 疾病严重度减成
               const sev = b.beastSnapshot?.severity ?? "mild";
               const sevDebuff = { mild: 0, moderate: -5, severe: -10, critical: -15 }[sev] || 0;
               finalRate = Math.max(5, Math.min(98, finalRate + sevDebuff));
-              result = Math.random() * 100 <= finalRate ? "success" : "fail";
+              const roll = Math.random() * 100;
+              if (roll <= finalRate) {
+                result = "success";
+              } else if (b.elixirQuality === "burnt" && Math.random() < 0.4) {
+                result = "worsen";
+              } else {
+                result = "fail";
+              }
             }
             return { ...b, treatmentProgress: Math.min(newProgress, b.treatmentTotal), result };
           });

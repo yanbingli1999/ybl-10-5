@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Heart, Star, Award, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { useGameStore } from "@/store/gameStore";
-import { BREEDS, DISEASE_NAMES, SEVERITY_NAMES, HERBS } from "@/data/gameData";
+import { BREEDS, DISEASE_NAMES, SEVERITY_NAMES, HERBS, ELIXIR_QUALITY_NAMES, ELIXIR_QUALITY_EMOJIS, ELIXIR_QUALITY_COLORS } from "@/data/gameData";
 import { ELEMENT_EMOJI, ELEMENT_NAMES } from "@/data/gameData";
 
 export default function ArchivePage() {
@@ -163,6 +163,11 @@ export default function ArchivePage() {
                         {r.evolved && (
                           <span className="tag bg-clinic-amber/30 text-clinic-deep border-clinic-amber/50">
                             ✨ 发生进化
+                          </span>
+                        )}
+                        {r.elixirQuality && (
+                          <span className={`tag border ${ELIXIR_QUALITY_COLORS[r.elixirQuality]}`}>
+                            {ELIXIR_QUALITY_EMOJIS[r.elixirQuality]} {ELIXIR_QUALITY_NAMES[r.elixirQuality]}
                           </span>
                         )}
                       </div>

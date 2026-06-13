@@ -295,6 +295,41 @@ export const HERBS: Herb[] = [
   },
 ];
 
+export const ELIXIR_QUALITY_NAMES: Record<string, string> = {
+  burnt: "焦糊",
+  common: "普通",
+  fine: "精良",
+  supreme: "极品",
+};
+
+export const ELIXIR_QUALITY_EMOJIS: Record<string, string> = {
+  burnt: "💀",
+  common: "🧪",
+  fine: "💎",
+  supreme: "🌟",
+};
+
+export const ELIXIR_QUALITY_COLORS: Record<string, string> = {
+  burnt: "bg-gray-600/20 text-gray-700 border-gray-600/40",
+  common: "bg-white/20 text-gray-600 border-gray-400/40",
+  fine: "bg-clinic-jade/20 text-emerald-700 border-clinic-jade/40",
+  supreme: "bg-clinic-amber/30 text-amber-700 border-clinic-amber/60",
+};
+
+export const FIRE_LEVEL_NAMES: Record<string, string> = {
+  low: "文火",
+  medium: "中火",
+  high: "武火",
+  violent: "猛火",
+};
+
+export const FIRE_LEVEL_EMOJIS: Record<string, string> = {
+  low: "🔥",
+  medium: "🔥🔥",
+  high: "🔥🔥🔥",
+  violent: "💥",
+};
+
 export const PRESCRIPTIONS: Prescription[] = [
   {
     id: "presc_fever",
@@ -302,6 +337,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "退热方",
     herbIds: ["herb_cold", "herb_water", "herb_pure"],
     successRate: 85,
+    alchemyParams: {
+      optimalFire: "low",
+      optimalStirs: 5,
+      optimalDuration: 20,
+      fireTolerance: 1,
+      stirTolerance: 2,
+      durationTolerance: 5,
+    },
   },
   {
     id: "presc_cold",
@@ -309,6 +352,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "驱寒方",
     herbIds: ["herb_fire", "herb_wood", "herb_water"],
     successRate: 88,
+    alchemyParams: {
+      optimalFire: "high",
+      optimalStirs: 8,
+      optimalDuration: 25,
+      fireTolerance: 1,
+      stirTolerance: 2,
+      durationTolerance: 6,
+    },
   },
   {
     id: "presc_poisoning",
@@ -316,6 +367,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "解毒方",
     herbIds: ["herb_antidote", "herb_pure", "herb_water"],
     successRate: 80,
+    alchemyParams: {
+      optimalFire: "medium",
+      optimalStirs: 10,
+      optimalDuration: 30,
+      fireTolerance: 1,
+      stirTolerance: 3,
+      durationTolerance: 6,
+    },
   },
   {
     id: "presc_fatigue",
@@ -323,6 +382,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "补气方",
     herbIds: ["herb_energy", "herb_wood", "herb_light"],
     successRate: 90,
+    alchemyParams: {
+      optimalFire: "medium",
+      optimalStirs: 6,
+      optimalDuration: 22,
+      fireTolerance: 1,
+      stirTolerance: 2,
+      durationTolerance: 5,
+    },
   },
   {
     id: "presc_fracture",
@@ -330,6 +397,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "接骨方",
     herbIds: ["herb_wood", "herb_immune", "herb_energy"],
     successRate: 82,
+    alchemyParams: {
+      optimalFire: "low",
+      optimalStirs: 4,
+      optimalDuration: 35,
+      fireTolerance: 1,
+      stirTolerance: 2,
+      durationTolerance: 8,
+    },
   },
   {
     id: "presc_mana",
@@ -337,6 +412,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "稳脉方",
     herbIds: ["herb_stable", "herb_energy", "herb_pure"],
     successRate: 78,
+    alchemyParams: {
+      optimalFire: "low",
+      optimalStirs: 7,
+      optimalDuration: 28,
+      fireTolerance: 1,
+      stirTolerance: 2,
+      durationTolerance: 6,
+    },
   },
   {
     id: "presc_curse",
@@ -344,6 +427,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "破咒方",
     herbIds: ["herb_light", "herb_pure", "herb_fire"],
     successRate: 75,
+    alchemyParams: {
+      optimalFire: "high",
+      optimalStirs: 12,
+      optimalDuration: 32,
+      fireTolerance: 1,
+      stirTolerance: 3,
+      durationTolerance: 6,
+    },
   },
   {
     id: "presc_parasite",
@@ -351,6 +442,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "驱虫方",
     herbIds: ["herb_light", "herb_antidote", "herb_immune"],
     successRate: 83,
+    alchemyParams: {
+      optimalFire: "medium",
+      optimalStirs: 9,
+      optimalDuration: 26,
+      fireTolerance: 1,
+      stirTolerance: 2,
+      durationTolerance: 5,
+    },
   },
   {
     id: "presc_dehydration",
@@ -358,6 +457,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "生津方",
     herbIds: ["herb_water", "herb_wood", "herb_energy"],
     successRate: 92,
+    alchemyParams: {
+      optimalFire: "low",
+      optimalStirs: 3,
+      optimalDuration: 18,
+      fireTolerance: 1,
+      stirTolerance: 2,
+      durationTolerance: 4,
+    },
   },
   {
     id: "presc_allergy",
@@ -365,6 +472,14 @@ export const PRESCRIPTIONS: Prescription[] = [
     name: "消敏方",
     herbIds: ["herb_immune", "herb_water", "herb_pure"],
     successRate: 86,
+    alchemyParams: {
+      optimalFire: "medium",
+      optimalStirs: 6,
+      optimalDuration: 24,
+      fireTolerance: 1,
+      stirTolerance: 2,
+      durationTolerance: 5,
+    },
   },
 ];
 

@@ -5,8 +5,10 @@ import {
   BREEDS, HERBS, PRESCRIPTIONS,
   SEVERITY_NAMES, SEVERITY_COLORS, DISEASE_NAMES,
   ELEMENT_EMOJI, ELEMENT_NAMES,
+  ELIXIR_QUALITY_NAMES, ELIXIR_QUALITY_EMOJIS, ELIXIR_QUALITY_COLORS,
 } from "@/data/gameData";
-import type { Bed, DiseaseType } from "@/types/game";
+import type { Bed, DiseaseType, AlchemyResult } from "@/types/game";
+import { AlchemyFurnace } from "./AlchemyFurnace";
 
 interface TreatmentModalProps {
   open: boolean;
@@ -33,6 +35,7 @@ export function TreatmentModal({ open, onClose, targetBed }: TreatmentModalProps
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [playerDiagnosis, setPlayerDiagnosis] = useState<DiseaseType | null>(null);
   const [showAllDiseases, setShowAllDiseases] = useState(false);
+  const [alchemyResult, setAlchemyResult] = useState<AlchemyResult | null>(null);
 
   const beast = useMemo(() => queue.find(b => b.id === selectedBeastId), [queue, selectedBeastId]);
   const breed = beast ? BREEDS.find(b => b.id === beast.breedId) : null;
@@ -56,8 +59,13 @@ export function TreatmentModal({ open, onClose, targetBed }: TreatmentModalProps
       setSelectedStaff(null);
       setPlayerDiagnosis(null);
       setShowAllDiseases(false);
+      setAlchemyResult(null);
     }
   }, [open, selectedBeastId]);
+
+  useEffect(() => {
+    setAlchemyResult(null);
+  }, [selectedHerbs]);
 
   if (!open || !beast || !breed) return null;
 
@@ -85,11 +93,11 @@ export function TreatmentModal({ open, onClose, targetBed }: TreatmentModalProps
     return sum + (h?.price ?? 0);
   }, 0);
 
-  const canSubmit = targetBed && selectedHerbs.length >= 1;
+  const canSubmit = targetBed && selectedHerbs.length >= 1 && alchemyResult !== null;
 
   const handleSubmit = () => {
     if (!canSubmit || !targetBed) return;
-    assignBedAndTreat(beast.id, targetBed.id, selectedStaff, selectedHerbs, playerDiagnosis);
+    assignBedAndTreat(beast.id, targetBed.id, selectedStaff, selectedHerbs, playerDiagnosis, alchemyResult);
     onClose();
   };
 
@@ -288,6 +296,14 @@ export function TreatmentModal({ open, onClose, targetBed }: TreatmentModalProps
             </div>
           </div>
 
+          {/* 炼丹炉 */}
+          <AlchemyFurnace
+            herbIds={selectedHerbs}
+            alchemyParams={recommendedPrescription?.alchemyParams ?? null}
+            onComplete={setAlchemyResult}
+            disabled={!targetBed}
+          />
+
           {/* 护理员 */}
           <div className="card p-3 border-clinic-light-jade/20">
             <div className="font-display text-sm text-clinic-deep flex items-center gap-1.5 mb-2">
@@ -356,6 +372,11 @@ export function TreatmentModal({ open, onClose, targetBed }: TreatmentModalProps
                   : "未选药"}
               </span>
             </div>
+            {alchemyResult && (
+              <span className={`tag border ${ELIXIR_QUALITY_COLORS[alchemyResult.quality]}`}>
+                {ELIXIR_QUALITY_EMOJIS[alchemyResult.quality]} {ELIXIR_QUALITY_NAMES[alchemyResult.quality]}
+              </span>
+            )}
             <span className="text-clinic-deep font-semibold tabular-nums ml-auto">
               💊 {herbsTotal} 金
             </span>
@@ -368,6 +389,12 @@ export function TreatmentModal({ open, onClose, targetBed }: TreatmentModalProps
               </>
             )}
           </div>
+          {!alchemyResult && selectedHerbs.length > 0 && (
+            <div className="text-[11px] text-clinic-amber mb-2 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              请先在上方炼丹炉中炼制药剂
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
@@ -380,7 +407,7 @@ export function TreatmentModal({ open, onClose, targetBed }: TreatmentModalProps
               disabled={!canSubmit}
               className="btn-primary flex-1 flex items-center justify-center gap-1.5 disabled:!bg-gray-300 text-sm"
             >
-              开始治疗
+              {alchemyResult ? "投入治疗" : "开始治疗"}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
